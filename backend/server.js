@@ -10,7 +10,9 @@ const port = 5050;
 app.use(express.json());
 
 function removeExpired(){
+    // remove expired short urls
     for(const shortUrl in allShortUrls){
+        // console.log(allShortUrls[shortUrl].expiry);
         if(new Date(allShortUrls[shortUrl].expiry) < new Date()){
             delete allShortUrls[shortUrl];
         }
@@ -18,6 +20,7 @@ function removeExpired(){
 }
 
 app.use((req, res, next) => {
+    // remove expired short urls
     removeExpired();
     next();
 })
@@ -27,7 +30,9 @@ app.get('/', (req, res) => {
 })
 
 app.post('/shorturls', async (req, res) => {
+    // create short url
     try{
+        // console.log(req.body);
         const {url, validity = 30, shortidFromUser} = req.body;
         if(!url || !url.startsWith('http')){
             await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Invalid URL Format'});
@@ -41,18 +46,21 @@ app.post('/shorturls', async (req, res) => {
             expiry: expiry,
             clicks: []
         };
+        // send back response
         return res.status(201).json({message: "Short URL created successfully",
             shortLink: `http://localhost:${port}/${short}`,
             expiry: expiry
         });
     }
     catch(e){
+        // log error
         await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
 }) 
 
 app.get('/shorturls/:code', async (req, res) => {
+    // get short url
     try {
         const {code} = req.params;
         if(!allShortUrls[code]){
@@ -62,12 +70,14 @@ app.get('/shorturls/:code', async (req, res) => {
         return res.status(200).json(allShortUrls[code]);
     }
     catch(e){
+        // log error
         await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
 })
 
 app.get('/shorturls/:code/clicks', async (req, res) => {
+    // get short url
     try {
         const {code} = req.params;
         if(!allShortUrls[code]){
@@ -75,9 +85,10 @@ app.get('/shorturls/:code/clicks', async (req, res) => {
             return res.status(404).json({error: 'Short URL not found'});
         }
         allShortUrls[code].clicks.push(new Date().toISOString());
-        return res.status(200).json(allShortUrls[code]);
+        return res.redirect(allShortUrls[code].originalUrl);
     }
     catch(e){
+        // log error
         await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
@@ -85,5 +96,6 @@ app.get('/shorturls/:code/clicks', async (req, res) => {
 
 
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
+    // start sever
+    console.log(`Server listening on port ${port}`)
 })
