@@ -1,13 +1,18 @@
-const express = require('express');
+import express from 'express'
 const app = express();
-const shortid = require('shortid');
-const Log = require('../loggingMiddleware/logs');
+import shortid from 'shortid';
+import Log from '../loggingMiddleware/log.js';
+import cors from 'cors';
 
 const allShortUrls = {};
 
 const port = 5050;
 
 app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+app.use(cors({
+    origin: 'http://localhost:3000'
+}));
 
 function removeExpired(){
     // remove expired short urls
@@ -35,7 +40,7 @@ app.post('/shorturls', async (req, res) => {
         // console.log(req.body);
         const {url, validity = 30, shortidFromUser} = req.body;
         if(!url || !url.startsWith('http')){
-            await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Invalid URL Format'});
+            await Log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Invalid URL Format'});
             return res.status(400).json({error: 'Invalid URL Format'});
         }
         const short = shortidFromUser || shortid.generate();
@@ -54,7 +59,7 @@ app.post('/shorturls', async (req, res) => {
     }
     catch(e){
         // log error
-        await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
+        await Log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
 }) 
@@ -64,14 +69,14 @@ app.get('/shorturls/:code', async (req, res) => {
     try {
         const {code} = req.params;
         if(!allShortUrls[code]){
-            await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Short URL not found'});
+            await Log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Short URL not found'});
             return res.status(404).json({error: 'Short URL not found'});
         }
         return res.status(200).json(allShortUrls[code]);
     }
     catch(e){
         // log error
-        await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
+        await Log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
 })
@@ -81,7 +86,7 @@ app.get('/shorturls/:code/clicks', async (req, res) => {
     try {
         const {code} = req.params;
         if(!allShortUrls[code]){
-            await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Short URL not found'});
+            await Log({stack: 'backend', level: 'error', pkg: 'controller', message: 'Short URL not found'});
             return res.status(404).json({error: 'Short URL not found'});
         }
         allShortUrls[code].clicks.push(new Date().toISOString());
@@ -89,7 +94,7 @@ app.get('/shorturls/:code/clicks', async (req, res) => {
     }
     catch(e){
         // log error
-        await Log.log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
+        await Log({stack: 'backend', level: 'error', pkg: 'controller', message: e.message});
         return res.status(500).json({error: e.message});
     }
 })
